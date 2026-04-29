@@ -1,5 +1,6 @@
 #ifndef GRAPH_H
 #define GRAPH_H
+#define INF 1000000000
 
 typedef struct {
     int **graph;
