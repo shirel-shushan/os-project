@@ -11,5 +11,8 @@ milestone2:
 milestone3:
 	$(CC) $(CFLAGS) gui.c graph.c dijkstra.c -o sim $(RAYLIB_FLAGS)
 
+milestone4:
+	$(CC) $(CFLAGS) gui.c graph.c dijkstra.c -o sim $(RAYLIB_FLAGS)
+
 clean:
-	rm -f dijkstra sim
+	rm -f dijkstra sim main gui
