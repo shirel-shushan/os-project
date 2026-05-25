@@ -59,3 +59,9 @@ test
 base_test
 *.out
 *.exe
+
+sim
+gui
+main
+dijkstra
+*.o
