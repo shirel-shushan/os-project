@@ -27,6 +27,9 @@ This project is a visual graph simulation and pathfinding animation built in C. 
   * Once the destination is reached, a "DESTINATION REACHED!" message is displayed.
 * **Compilation:** `make milestone3`
 * **Execution:** `./sim <input_file.txt>`
+  
+Milestone 6 Synchronization Strategy:
+To ensure that no two traveler processes occupy the same node simultaneously, we implemented Named Semaphores (sem_open) acting as mutexes for each individual node. Before a child process enters its next node, it calls sem_wait on that specific node's semaphore. Upon leaving the node (after a 1-second simulation sleep), it calls sem_post to release the resource for other waiting travelers. Potential deadlocks from previous executions are prevented by clearing all semaphores using sem_unlink at initialization and termination
 
 ---
 
