@@ -8,6 +8,8 @@
 #include <string.h>
 #include "graph.h"
 #include "dijkstra.h"
+#include <signal.h>
+#include <semaphore.h>
 
 #define MAX_TRAVELERS 20
 
@@ -68,21 +70,43 @@ void runTravelerChild(int travelerId, int start, int end, char* filename, int wr
         exit(0);
     }
 
-    /* Step 3: Simulate the journey along the path and report to the parent */
+    /* Step 3: Simulate the journey along the path with Node Synchronization */
     for (int i = 0; i < pathLen - 1; i++) {
-        sleep(1); /* Simulate movement time between nodes */
+        int next_node = path[i + 1];
+
+        /* Create a unique semaphore name for the next node (e.g., "/sem_node_2") */
+        char sem_name[64];
+        sprintf(sem_name, "/sem_node_%d", next_node);
+
+        /* Open/Create a named semaphore initialized to 1 (acting as a Mutex) */
+        sem_t* node_sem = sem_open(sem_name, O_CREAT, 0644, 1);
+        if (node_sem == SEM_FAILED) {
+            perror("sem_open failed in child");
+            break;
+        }
+
+        /* --- CRITICAL SECTION START: Wait outside if the node is occupied --- */
+        sem_wait(node_sem);
 
         IPCMessage msg;
         msg.pid = myPid;
         msg.traveler_id = travelerId;
         msg.arrived_node = path[i];
-        msg.next_node = path[i + 1];
+        msg.next_node = next_node;
         msg.finished = false;
 
         /* Write progress report into the pipe */
         write(writeFd, &msg, sizeof(msg));
+
+        /* Sleep for 1 full second inside the node as required */
+        sleep(1);
+
+        /* --- CRITICAL SECTION END: Release the node for the next waiting process --- */
+        sem_post(node_sem);
+        sem_close(node_sem);
     }
 
+    /* Brief sleep before reaching the final destination */
     sleep(1);
 
     /* Send final termination message to the parent */
@@ -128,22 +152,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    /* Locate and read the travelers section */
-    char line[256];
-    bool foundTravelers = false;
-    while (fgets(line, sizeof(line), file)) {
-        if (strstr(line, "#travelers") || strstr(line, "travelers")) {
-            foundTravelers = true;
-            break;
-        }
-    }
-
-    if (!foundTravelers) {
-        printf("Error: #travelers section not found\n");
-        fclose(file);
-        return 1;
-    }
-
+    /* Read the number of travelers directly from the next line */
     int numTravelers = 0;
     if (fscanf(file, "%d", &numTravelers) != 1 || numTravelers <= 0) {
         printf("Invalid number of travelers\n");
@@ -168,6 +177,13 @@ int main(int argc, char* argv[]) {
         }
     }
     fclose(file);
+
+    /* Unlink old semaphores from potential previous crashes to start fresh */
+    for (int i = 0; i < N; i++) {
+        char sem_name[64];
+        sprintf(sem_name, "/sem_node_%d", i);
+        sem_unlink(sem_name);
+    }
 
     /* Create IPC pipes for each traveler */
     int pipes[MAX_TRAVELERS][2];
@@ -234,10 +250,17 @@ int main(int argc, char* argv[]) {
         usleep(10000); 
     }
 
+    /* Final cleanup: Unlink semaphores upon successful termination */
+    for (int i = 0; i < N; i++) {
+        char sem_name[64];
+        sprintf(sem_name, "/sem_node_%d", i);
+        sem_unlink(sem_name);
+    }
+
     for (int i = 0; i < numTravelers; i++) {
         waitpid(childPids[i], NULL, 0);
         close(pipes[i][0]);
     }
 
     return 0;
-}
+} 
