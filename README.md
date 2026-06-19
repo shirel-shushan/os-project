@@ -38,3 +38,93 @@ To ensure that no two traveler processes occupy the same node simultaneously, we
 2. Clean old files: `make clean`
 3. Compile the simulation: `make milestone3`
 4. Run the program with your input file: `./sim input.txt`
+## Milestone 4: Multiple Travelers
+
+* **Description:** Added support for multiple traveler processes. Each traveler is represented by a separate child process created using `fork()`. All travelers independently calculate and follow their shortest path through the graph.
+* **Compilation:** `make milestone4`
+* **Execution:** `./sim input.txt`
+
+---
+
+## Milestone 5: Concurrent Traveler Simulation
+
+* **Description:** Multiple travelers move concurrently through the graph. Each traveler follows its own shortest path while the GUI displays all active travelers simultaneously. Different colors are used to distinguish travelers.
+* **Compilation:** `make milestone5`
+* **Execution:** `./sim input.txt`
+
+---
+
+## Milestone 6: Node Synchronization
+
+* **Description:** Added synchronization between traveler processes using POSIX named semaphores.
+
+  * Each graph node is protected by a dedicated semaphore.
+  * Only one traveler may occupy a node at any given time.
+  * Travelers attempting to enter an occupied node must wait until it becomes available.
+  * Waiting travelers are displayed in the GUI and reported in the terminal output.
+  * Semaphores are cleaned using `sem_unlink()` to prevent stale synchronization objects between runs.
+
+* **Compilation:** `make milestone6`
+
+* **Execution:** `./sim input.txt`
+
+---
+
+## Milestone 7: Scheduling Algorithms
+
+* **Description:** Added scheduling support for traveler admission into occupied nodes.
+
+  * FCFS (First Come First Served) scheduler.
+  * SJF (Shortest Job First) scheduler.
+  * The scheduler is selected through command-line arguments.
+  * The active scheduler is displayed in the GUI.
+  * Different scheduling policies may produce different traveler completion orders.
+
+* **Compilation:** `make milestone7`
+
+* **Execution:**
+
+```bash
+./sim -schd fcfs input.txt
+./sim -schd sjf input.txt
+```
+
+### Scheduling Policies
+
+**FCFS (First Come First Served)**
+
+* Travelers are admitted according to arrival order.
+
+**SJF (Shortest Job First)**
+
+* Travelers with the shortest remaining path receive higher priority.
+
+---
+
+## How to Run the Project
+
+```bash
+make clean
+
+make milestone1
+./dijkstra input.txt
+
+make milestone2
+./sim input.txt
+
+make milestone3
+./sim input.txt
+
+make milestone4
+./sim input.txt
+
+make milestone5
+./sim input.txt
+
+make milestone6
+./sim input.txt
+
+make milestone7
+./sim -schd fcfs input.txt
+./sim -schd sjf input.txt
+```
