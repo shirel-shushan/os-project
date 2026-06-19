@@ -331,7 +331,6 @@ int main(int argc, char* argv[]) {
                     }
 
                 } else { /* MSG_FINISHED */
-                    printf("[PID=%d] arrived at node %d | DESTINATION\n", msg.pid, msg.arrived_node);
                     printf("[PID=%d] finished\n", msg.pid);
                     fflush(stdout);
                     finishedFlags[i] = true;
