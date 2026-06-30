@@ -85,8 +85,22 @@ void runTravelerChild(int travelerId, int start, int end, char* filename, int wr
             break;
         }
 
+        // ======================================================================
+        // 📢 הדפסת החלטת מתזמן: מי ממתין ולמה (דרישת משימה B)
+        // ======================================================================
+        printf("[SCHEDULER] Traveler (PID=%d) is WAITING to enter Node %d. Reason: Node is currently tracked or occupied.\n", 
+               myPid, next_node);
+        fflush(stdout); 
+
         /* --- CRITICAL SECTION START: Wait outside if the node is occupied --- */
         sem_wait(node_sem);
+
+        // ======================================================================
+        // 📢 הדפסת החלטת מתזמן: מי נבחר ולמה (דרישת משימה B)
+        // ======================================================================
+        printf("[SCHEDULER] Traveler (PID=%d) was SELECTED to occupy Node %d. Reason: Semaphore token acquired.\n", 
+               myPid, next_node);
+        fflush(stdout);
 
         IPCMessage msg;
         msg.pid = myPid;
@@ -263,4 +277,4 @@ int main(int argc, char* argv[]) {
     }
 
     return 0;
-} 
+}
