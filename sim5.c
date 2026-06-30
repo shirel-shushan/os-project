@@ -26,6 +26,7 @@ typedef struct {
     int arrived_node;   /* node the traveler is currently/just left */
     int next_node;       /* node the traveler is heading to (-1 if none) */
     bool finished;        /* true once the traveler reached its destination */
+    bool noPath;          /* true if traveler has no path to destination */
 } IPCMessage;
 
 typedef struct {
@@ -90,7 +91,7 @@ void runTravelerChild(int travelerId, int start, int end, const char* filename, 
 
     FILE* file = fopen(filename, "r");
     if (file == NULL) {
-        IPCMessage msg = { myPid, travelerId, start, -1, true };
+        IPCMessage msg = { myPid, travelerId, start, -1, true, false };
         write(writeFd, &msg, sizeof(msg));
         close(writeFd);
         exit(1);
@@ -114,7 +115,9 @@ void runTravelerChild(int travelerId, int start, int end, const char* filename, 
     int* path = dijkstra(g, start, end, &pathLen, &totalWeight);
 
     if (path == NULL || pathLen <= 0) {
-        IPCMessage msg = { myPid, travelerId, start, -1, true };
+        /* No path exists to destination (e.g. disconnected graph) -
+           tell parent via the dedicated noPath flag instead of a normal "finished" message */
+        IPCMessage msg = { myPid, travelerId, start, -1, true, true };
         write(writeFd, &msg, sizeof(msg));
         if (path) free(path);
         freeGraph(g);
@@ -125,14 +128,14 @@ void runTravelerChild(int travelerId, int start, int end, const char* filename, 
     for (int i = 0; i < pathLen - 1; i++) {
         int next_node = path[i + 1];
 
-        IPCMessage msg = { myPid, travelerId, path[i], next_node, false };
+        IPCMessage msg = { myPid, travelerId, path[i], next_node, false, false };
         write(writeFd, &msg, sizeof(msg));
 
         /* Spend 1 full second at the node before moving on (no locking yet in milestone 5) */
         sleep(1);
     }
 
-    IPCMessage finalMsg = { myPid, travelerId, end, -1, true };
+    IPCMessage finalMsg = { myPid, travelerId, end, -1, true, false };
     write(writeFd, &finalMsg, sizeof(finalMsg));
 
     free(path);
@@ -249,7 +252,13 @@ int main(int argc, char* argv[]) {
                 travelers[i].started = true;
 
                 if (msg.finished) {
-                    printf("[PID=%d] arrived at node %d | DESTINATION\n", msg.pid, msg.arrived_node);
+                    if (msg.noPath) {
+                        /* Special case: traveler discovered it has no path to its destination
+                           (e.g. disconnected graph) - handled separately from normal arrivals */
+                        printf("[PID=%d] *** NO PATH AVAILABLE to destination from node %d ***\n", msg.pid, msg.arrived_node);
+                    } else {
+                        printf("[PID=%d] arrived at node %d | DESTINATION\n", msg.pid, msg.arrived_node);
+                    }
                     printf("[PID=%d] finished\n", msg.pid);
                     fflush(stdout);
                     finishedFlags[i] = true;
